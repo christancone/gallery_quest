@@ -3,6 +3,17 @@
 import { useState, useEffect } from 'react';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
+import Image from 'next/image';
+
+// Define API Response Types
+interface GalleryquestImage {
+  id: number;
+  original_name: string;
+  date_taken: string;
+  uploaded_by: string;
+  path_watermarked?: string;
+  location_id: string;
+}
 
 interface Product {
   id: number;
@@ -15,7 +26,8 @@ interface Product {
 }
 
 export default function HomePage() {
-  const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+  const PLACEHOLDER_IMG = 'https://placehold.co/600x400?text=No+Image';
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -30,12 +42,18 @@ export default function HomePage() {
   const itemsPerPage = 9;
 
   useEffect(() => {
+    if (!apiKey) {
+      setError('API key is missing');
+      setLoading(false);
+      return;
+    }
+
     const fetchImages = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const credentials = btoa(`${API_KEY}:`);
+        const credentials = btoa(`${apiKey}:`);
 
         const response = await fetch(
           'https://photos-ventouxsummit.fr/api/galleryquest_images?display=full&output_format=JSON',
@@ -57,7 +75,7 @@ export default function HomePage() {
           throw new Error('API response format is unexpected.');
         }
 
-        const formattedProducts: Product[] = data.galleryquest_imagess.map((item: any) => ({
+        const formattedProducts: Product[] = data.galleryquest_imagess.map((item: GalleryquestImage) => ({
           id: item.id,
           name: item.original_name || 'Unknown Image',
           dateTaken: item.date_taken || '',
@@ -70,16 +88,21 @@ export default function HomePage() {
         }));
 
         setProducts(formattedProducts);
-      } catch (err: any) {
-        console.error('Error fetching images:', err);
-        setError(err.message);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          console.error('Error fetching images:', err);
+          setError(err.message);
+        } else {
+          console.error('Unknown error fetching images');
+          setError('Unknown error');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchImages();
-  }, []);
+  }, [apiKey]); // Add apiKey to dependencies
 
   const filteredProducts = products.filter((product) => {
     const matchesLocation = selectedLocation === 'all' || product.locationId === selectedLocation;
@@ -109,13 +132,10 @@ export default function HomePage() {
             Discover and explore an incredible collection of cycling adventures on Mont Ventoux!
           </p>
         </div>
-        {/* Background image */}
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80')] bg-cover bg-center opacity-20 blur-sm"></div>
-        {/* Overlay */}
         <div className="absolute inset-0 bg-black opacity-30"></div>
       </header>
 
-      {/* Loading & Error */}
       {loading && <p className="text-center text-gray-400">Loading images...</p>}
       {error && <p className="text-center text-red-500">Error: {error}</p>}
 
@@ -174,12 +194,14 @@ export default function HomePage() {
               onClick={() => setPreviewImage(product)}
               className="relative group overflow-hidden rounded-lg border border-gray-800 hover:border-blue-500 transition-all bg-neutral-800 shadow-lg cursor-pointer"
             >
-              <img
-                src={product.imageUrl || 'https://placehold.co/600x400?text=No+Image'}
+              <Image
+                src={product.imageUrl || PLACEHOLDER_IMG}
                 alt={product.name}
+                width={600}
+                height={400}
                 className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110"
                 onError={(e) => {
-                  e.currentTarget.src = 'https://placehold.co/600x400?text=No+Image';
+                  e.currentTarget.src = PLACEHOLDER_IMG;
                 }}
               />
 
@@ -187,7 +209,8 @@ export default function HomePage() {
               <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/70 to-transparent opacity-0 group-hover:opacity-100 transform translate-y-10 group-hover:translate-y-0 transition-all duration-500 ease-in-out">
                 <h2 className="text-lg font-semibold text-white mb-1">{product.name}</h2>
                 <p className="text-sm text-gray-300">
-                  {new Date(product.dateTaken).toLocaleDateString()} | {new Date(product.dateTaken).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(product.dateTaken).toLocaleDateString()} |{' '}
+                  {new Date(product.dateTaken).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
                 <p className="text-sm text-gray-300">Uploaded by: {product.uploadedBy}</p>
                 <p className="text-sm text-gray-300">Location: {product.locationId}</p>
@@ -200,7 +223,7 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Pagination Controls */}
+      {/* Pagination */}
       <div className="flex justify-center mt-10 space-x-4">
         <button
           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -229,7 +252,7 @@ export default function HomePage() {
         </button>
       </div>
 
-      {/* CTA at Bottom - Chat with AI Assistant */}
+      {/* CTA */}
       <div className="mt-20 mb-10 flex justify-center">
         <div className="bg-gradient-to-r from-purple-700 to-blue-700 text-white px-8 py-6 rounded-lg shadow-lg text-center max-w-2xl">
           <h3 className="text-2xl font-bold mb-2">Not seeing your pic yet?</h3>
@@ -247,7 +270,6 @@ export default function HomePage() {
       {previewImage && (
         <div className="fixed inset-0 z-50 bg-black/80 flex justify-center items-center p-4">
           <div className="bg-neutral-800 rounded-lg overflow-hidden w-full max-w-4xl max-h-[90vh] flex flex-col shadow-lg">
-            {/* Close Button */}
             <div className="flex justify-end p-4">
               <button
                 onClick={() => setPreviewImage(null)}
@@ -259,9 +281,11 @@ export default function HomePage() {
 
             <div className="flex flex-col md:flex-row gap-6 px-6 pb-6 overflow-hidden">
               <div className="flex-1 flex justify-center items-center">
-                <img
-                  src={previewImage.imageUrl || 'https://placehold.co/600x400?text=No+Image'}
+                <Image
+                  src={previewImage.imageUrl || PLACEHOLDER_IMG}
                   alt={previewImage.name}
+                  width={600}
+                  height={400}
                   className="object-contain max-h-[60vh] w-full rounded"
                 />
               </div>
@@ -270,12 +294,8 @@ export default function HomePage() {
                 <div>
                   <h2 className="text-2xl font-bold mb-2">{previewImage.name}</h2>
                   <p className="text-gray-300 mb-1">Uploaded by: {previewImage.uploadedBy}</p>
-                  <p className="text-gray-300 mb-1">
-                    Date: {new Date(previewImage.dateTaken).toLocaleDateString()}
-                  </p>
-                  <p className="text-gray-300 mb-1">
-                    Time: {new Date(previewImage.dateTaken).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  <p className="text-gray-300 mb-1">Date: {new Date(previewImage.dateTaken).toLocaleDateString()}</p>
+                  <p className="text-gray-300 mb-1">Time: {new Date(previewImage.dateTaken).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   <p className="text-gray-300 mb-1">Location ID: {previewImage.locationId}</p>
                   <p className="text-lg font-bold text-blue-400 mt-4">${previewImage.price}</p>
                 </div>
