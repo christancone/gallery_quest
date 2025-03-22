@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 // Types
 interface GalleryquestImage {
@@ -45,6 +48,8 @@ const SkeletonCard = () => (
 );
 
 export default function Gallery() {
+  const router = useRouter();
+
   const apiKey = process.env.NEXT_PUBLIC_API_KEY;
   const PLACEHOLDER_IMG = 'https://placehold.co/600x400?text=No+Image';
 
@@ -139,6 +144,9 @@ export default function Gallery() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+  const availableDates = Array.from(
+    new Set(products.map((product) => new Date(product.dateTaken).toISOString().split('T')[0]))
+  );
 
   return (
     <div className="min-h-screen bg-neutral-900 text-white font-sans">
@@ -158,48 +166,62 @@ export default function Gallery() {
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-10 justify-center items-center px-4">
-        <select
-          className="border border-gray-700 bg-neutral-800 text-white rounded px-4 py-2 w-64"
-          value={selectedLocation}
-          onChange={(e) => setSelectedLocation(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-        >
-          <option value="all">All Locations</option>
-          {[...Array(9)].map((_, idx) => (
-            <option key={idx + 1} value={idx + 1}>{`Location ${idx + 1}`}</option>
-          ))}
-        </select>
+      <select
+    className="border border-gray-700 bg-neutral-800 text-white rounded px-4 py-2 w-64"
+    value={selectedLocation}
+    onChange={(e) => setSelectedLocation(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+  >
+    <option value="all">All Locations</option>
+    {[...Array(9)].map((_, idx) => (
+      <option key={idx + 1} value={idx + 1}>{`Location ${idx + 1}`}</option>
+    ))}
+  </select>
 
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="border border-gray-700 bg-neutral-800 text-white rounded px-4 py-2"
-        />
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="border border-gray-700 bg-neutral-800 text-white rounded px-4 py-2"
-        />
+  {/* Start Date */}
+  <div className="flex flex-col items-center w-64">
+    <label className="mb-2 text-sm text-gray-300"></label>
+    <DatePicker
+      selected={startDate ? new Date(startDate) : null}
+      onChange={(date) => setStartDate(date?.toISOString().split('T')[0] || '')}
+      highlightDates={availableDates.map((date) => new Date(date))}
+      placeholderText="Start Date"
+      className="border border-gray-700 bg-neutral-800 text-white rounded px-4 py-2 w-full"
+      calendarClassName="bg-neutral-900 text-white"
+    />
+  </div>
 
-        <div className="flex flex-col items-center w-64">
-          <label className="mb-2 text-sm text-gray-300">
-            Time Range: {selectedHours[0]}:00 - {selectedHours[1]}:00
-          </label>
-          <Slider.Range
-            min={0}
-            max={24}
-            allowCross={false}
-            value={selectedHours}
-            onChange={(value: number[]) => setSelectedHours([value[0], value[1]])}
-            trackStyle={[{ backgroundColor: '#3B82F6' }]}
-            handleStyle={[
-              { borderColor: '#3B82F6', backgroundColor: '#3B82F6' },
-              { borderColor: '#3B82F6', backgroundColor: '#3B82F6' },
-            ]}
-            railStyle={{ backgroundColor: '#374151' }}
-          />
-        </div>
+  {/* End Date */}
+  <div className="flex flex-col items-center w-64">
+    <label className="mb-2 text-sm text-gray-300"></label>
+    <DatePicker
+      selected={endDate ? new Date(endDate) : null}
+      onChange={(date) => setEndDate(date?.toISOString().split('T')[0] || '')}
+      highlightDates={availableDates.map((date) => new Date(date))}
+      placeholderText="End Date"
+      className="border border-gray-700 bg-neutral-800 text-white rounded px-4 py-2 w-full"
+      calendarClassName="bg-neutral-900 text-white"
+    />
+  </div>
+
+  {/* Time Range Filter (existing) */}
+  <div className="flex flex-col items-center w-64">
+    <label className="mb-2 text-sm text-gray-300">
+      Time Range: {selectedHours[0]}:00 - {selectedHours[1]}:00
+    </label>
+    <Slider.Range
+      min={0}
+      max={24}
+      allowCross={false}
+      value={selectedHours}
+      onChange={(value: number[]) => setSelectedHours([value[0], value[1]])}
+      trackStyle={[{ backgroundColor: '#3B82F6' }]}
+      handleStyle={[
+        { borderColor: '#3B82F6', backgroundColor: '#3B82F6' },
+        { borderColor: '#3B82F6', backgroundColor: '#3B82F6' },
+      ]}
+      railStyle={{ backgroundColor: '#374151' }}
+    />
+  </div>
       </div>
 
       {/* Loading / Error / Gallery */}
@@ -289,11 +311,11 @@ export default function Gallery() {
           <h3 className="text-2xl font-bold mb-2">Not seeing your pic yet?</h3>
           <p className="mb-4">Try our AI-powered chatbot to help you search smarter and faster!</p>
           <button
-            onClick={() => alert('Chatbot coming soon!')}
-            className="bg-white text-blue-800 px-6 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-all duration-300"
-          >
-            Chat with AI Assistant
-          </button>
+        onClick={() => router.push('/chat')} // ✅ Correct push usage
+        className="bg-white text-blue-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all duration-300"
+      >
+        Chat with AI
+      </button>
         </div>
       </div>
 
